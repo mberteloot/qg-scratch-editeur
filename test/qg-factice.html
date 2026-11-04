@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>QG factice</title>
+  <style>
+    html, body { margin: 0; height: 100%; }
+    iframe { border: 0; width: 100%; height: 100%; display: block; }
+  </style>
+</head>
+<body>
+<!-- Joue le rôle du QG : charge l'éditeur dans une iframe et le pilote (outils/tester-pont.js) -->
+<iframe id="editeur" src="../index.html" allow="camera; microphone"></iframe>
+<script>
+var editeur = document.getElementById('editeur');
+var attentes = {};
+var compteur = 0;
+window.evenements = [];
+window.addEventListener('message', function(ev) {
+  var m = ev.data;
+  if (ev.source !== editeur.contentWindow || !m || m.qg !== 1) return;
+  if (m.type === 'evenement') { window.evenements.push(m.nom); return; }
+  var a = attentes[m.id];
+  if (!a) return;
+  delete attentes[m.id];
+  if (m.ok) a.ok(m); else a.ko(new Error(m.erreur));
+});
+window.commande = function(type, donnees, transfert) {
+  var id = ++compteur;
+  var m = Object.assign({ qg: 1, id: id, type: type }, donnees || {});
+  return new Promise(function(ok, ko) {
+    attentes[id] = { ok: ok, ko: ko };
+    editeur.contentWindow.postMessage(m, '*', transfert || []);
+  });
+};
+window.chargerDepart = function(nom, cle) {
+  return fetch('/departs/' + nom).then(function(r) { return r.arrayBuffer(); }).then(function(sb3) {
+    return window.commande('charger', { sb3: sb3, cle: cle }, [sb3]);
+  });
+};
+</script>
+</body>
+</html>

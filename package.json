@@ -1,0 +1,26 @@
+{
+  "name": "qg-scratch-editeur",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Éditeur Scratch (scratch-gui, AGPL-3.0) intégré au « QG des missions » (initiation Scratch 4e), publié sur GitHub Pages et chargé dans une iframe du QG.",
+  "scripts": {
+    "gui": "node outils/copier-gui.js",
+    "test": "node outils/tester-pont.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mberteloot/qg-scratch-editeur.git"
+  },
+  "license": "AGPL-3.0-only",
+  "type": "commonjs",
+  "dependencies": {
+    "@scratch/scratch-gui": "15.2.0",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "react-redux": "8.1.3",
+    "redux": "4.2.1"
+  },
+  "devDependencies": {
+    "puppeteer-core": "23.11.1"
+  }
+}
