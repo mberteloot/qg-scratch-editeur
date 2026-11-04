@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Test réseau éditeur Scratch</title>
+  <link rel="icon" href="https://cdn.jsdelivr.net/gh/mberteloot/webapp-favicons@v1/4e-initiation-scratch.png">
+  <style>
+    :root { --fond: #f4f6fb; --texte: #1d2433; --carte: #fff; --ok: #1e8e3e; --ko: #c5221f; --attente: #8a8f99; }
+    @media (prefers-color-scheme: dark) {
+      :root { --fond: #151a24; --texte: #e8ebf2; --carte: #222a38; --ok: #5bd17a; --ko: #ff7b72; --attente: #9aa1ad; }
+    }
+    body { margin: 0; padding: 16px; background: var(--fond); color: var(--texte); font: 16px/1.5 system-ui, sans-serif; }
+    main { max-width: 640px; margin: 0 auto; }
+    h1 { font-size: 1.4rem; }
+    ul { list-style: none; padding: 0; }
+    li { background: var(--carte); border-radius: 8px; padding: .6rem .8rem; margin: .4rem 0; }
+    .ok { color: var(--ok); font-weight: 700; }
+    .ko { color: var(--ko); font-weight: 700; }
+    .attente { color: var(--attente); }
+    #bilan { font-size: 1.2rem; font-weight: 700; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>🚀 QG des missions : test de l'éditeur Scratch</h1>
+  <p>Si tu lis cette page, <b>github.io est accessible</b> depuis ce Chromebook. Attends quelques secondes que les autres lignes passent au vert.</p>
+  <ul id="tests"></ul>
+  <p id="bilan" class="attente">Tests en cours…</p>
+  <p class="attente">Version du test : 2026-11-04</p>
+</main>
+<script>
+// Diagnostic avant l'éditeur intégré : ce que scratch-gui aura besoin d'atteindre
+// depuis un Chromebook élève (réseau de l'école).
+var CHAT = 'bcf454acf82e4504149f7ffe07081dbc.svg'; // costume 1 du chat Scratch
+var TESTS = [
+  { nom: 'Page github.io chargée', faire: function() { return Promise.resolve('ok'); } },
+  { nom: 'Bibliothèque de lutins Scratch (image)', faire: function() { return image('https://cdn.assets.scratch.mit.edu/internalapi/asset/' + CHAT + '/get/'); } },
+  { nom: 'Bibliothèque de lutins Scratch (téléchargement)', faire: function() { return telecharger('https://cdn.assets.scratch.mit.edu/internalapi/asset/' + CHAT + '/get/'); } },
+  { nom: 'Serveur de projets Scratch', faire: function() { return image('https://assets.scratch.mit.edu/internalapi/asset/' + CHAT + '/get/'); } },
+  { nom: 'jsDelivr (bibliothèques)', faire: function() { return telecharger('https://cdn.jsdelivr.net/npm/scratchblocks@3.6.4/package.json'); } },
+  { nom: 'Sauvegarde dans le navigateur (IndexedDB)', faire: indexedDbOk },
+  { nom: 'Dans une iframe : ' + (window.self !== window.top ? 'oui' : 'non (normal pour ce test)'), faire: function() { return Promise.resolve('ok'); } },
+  { nom: 'Taille de la fenêtre : ' + window.innerWidth + ' × ' + window.innerHeight + ' px (l\'éditeur demande au moins 1024 px de large)', faire: function() { return window.innerWidth >= 1024 ? Promise.resolve('ok') : Promise.reject(new Error('fenêtre étroite')); } },
+];
+
+function image(url) {
+  return new Promise(function(ok, ko) {
+    var img = new Image();
+    var minuteur = setTimeout(function() { ko(new Error('délai dépassé')); }, 10000);
+    img.onload = function() { clearTimeout(minuteur); ok('ok'); };
+    img.onerror = function() { clearTimeout(minuteur); ko(new Error('bloqué')); };
+    img.src = url + '?t=' + Date.now();
+  });
+}
+
+function telecharger(url) {
+  return fetch(url, { cache: 'no-store' }).then(function(r) {
+    if (!r.ok) throw new Error('réponse ' + r.status);
+    return 'ok';
+  });
+}
+
+function indexedDbOk() {
+  return new Promise(function(ok, ko) {
+    try {
+      var req = indexedDB.open('test-qg', 1);
+      req.onupgradeneeded = function() { req.result.createObjectStore('t'); };
+      req.onsuccess = function() { req.result.close(); ok('ok'); };
+      req.onerror = function() { ko(new Error('refusée')); };
+    } catch (err) { ko(err); }
+  });
+}
+
+var liste = document.getElementById('tests');
+var resultats = TESTS.map(function(t) {
+  var li = document.createElement('li');
+  li.innerHTML = '<span class="attente">⏳</span> ' + t.nom;
+  liste.appendChild(li);
+  return t.faire().then(function() {
+    li.innerHTML = '<span class="ok">✅</span> ' + t.nom;
+    return true;
+  }, function(err) {
+    li.innerHTML = '<span class="ko">❌</span> ' + t.nom + ' : ' + err.message;
+    return false;
+  });
+});
+Promise.all(resultats).then(function(r) {
+  var bilan = document.getElementById('bilan');
+  var echecs = r.filter(function(x) { return !x; }).length;
+  bilan.className = echecs ? 'ko' : 'ok';
+  bilan.textContent = echecs ? echecs + ' test(s) en échec : prends une photo de l\'écran.' : 'Tout est vert : l\'éditeur intégré pourra fonctionner ici.';
+});
+</script>
+</body>
+</html>
