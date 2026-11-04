@@ -11,9 +11,11 @@
  *   sauvegarde  { cle }                    date de la sauvegarde du navigateur → { date } (null si aucune)
  *   sauver      {}                         sauvegarde tout de suite dans le navigateur
  *   effacer     { cle }                    supprime la sauvegarde du navigateur
- *   projet      {}                         → { json (project.json), execute } execute = le projet a tourné
- *                                            depuis la dernière modification (drapeau vert, touche, clic)
+ *   projet      {}                         → { json (project.json), execute } execute = drapeau vert cliqué
+ *                                            ou script lancé depuis la dernière modification
  *   sb3         {}                         → { sb3: ArrayBuffer } (bouton « Télécharger mon projet »)
+ *   drapeau     {}                         clic sur le drapeau vert (bouton « ▶ Tester » du QG)
+ *   stop        {}                         arrête tout
  * Événements : pret (éditeur prêt), modifie, execute, sauve { date }
  *
  * Seule la fenêtre parente est écoutée. La sauvegarde (IndexedDB) est rangée dans le
@@ -80,13 +82,17 @@
       evenement('modifie');
     }
   });
-  vm.on('PROJECT_RUN_START', function() {
+  // Exécuté : drapeau vert cliqué (PROJECT_START, même sans script à lancer, ex. M0)
+  // ou un script qui démarre (touche, clic sur un lutin ou sur un bloc)
+  function execute() {
     if (etat.chargement) return;
     if (!etat.execute) {
       etat.execute = true;
       evenement('execute');
     }
-  });
+  }
+  vm.on('PROJECT_START', execute);
+  vm.on('PROJECT_RUN_START', execute);
 
   function charger(sb3) {
     etat.chargement = true;
@@ -181,6 +187,14 @@
     },
     projet: function() {
       return { json: vm.toJSON(), execute: etat.execute };
+    },
+    drapeau: function() {
+      vm.greenFlag();
+      return {};
+    },
+    stop: function() {
+      vm.stopAll();
+      return {};
     },
     sb3: function() {
       return vm.saveProjectSb3().then(function(blob) { return blob.arrayBuffer(); }).then(function(sb3) {
